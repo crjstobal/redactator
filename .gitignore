@@ -6,3 +6,4 @@ dist/
 *.redacted.*
 .pytest_cache/
 .DS_Store
+demo/*.mp4

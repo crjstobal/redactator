@@ -1,0 +1,41 @@
+[
+  {
+    "text": "Client files are full of private data. Sending them to a cloud tool to clean them defeats the point."
+  },
+  {
+    "text": "Drop photos, PDFs and screen recordings. Several at once."
+  },
+  {
+    "text": "Tick what to hide: names, faces, emails, addresses, IDs, cards, licence plates..."
+  },
+  {
+    "text": "Add things only you know about, like your car's plate."
+  },
+  {
+    "text": "And keep your own details visible."
+  },
+  {
+    "text": "Three open models read every line on this laptop: fixed patterns, GLiNER2-PII and Gemma 4."
+  },
+  {
+    "text": "Everything found gets a solid black box. Not blur: blur can be undone."
+  },
+  {
+    "text": "Review the list. Untick anything that should stay visible."
+  },
+  {
+    "text": "Missed something? Draw a box by hand."
+  },
+  {
+    "text": "In screen recordings the boxes follow the text while it scrolls."
+  },
+  {
+    "text": "Export clean copies. Your originals are never touched."
+  },
+  {
+    "text": "PDFs are redacted for real: the hidden text is deleted from the file, not covered."
+  },
+  {
+    "text": "The exported screen recording, ready to share."
+  }
+]

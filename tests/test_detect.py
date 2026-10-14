@@ -51,3 +51,13 @@ def test_unticking_a_long_finding_keeps_the_short_one_hidden(monkeypatch):
     long.enabled = False
     first_line = [b for b in short.boxes[0] if b[1] < 16]
     assert first_line, "the name inside the long finding lost its own box"
+
+
+def test_address_takes_the_country_at_the_end_of_the_line(monkeypatch):
+    from redactator import detect
+
+    page = page_of("14 Canal Road, Leeds LS12 2PJ, United Kingdom")
+    monkeypatch.setattr(brain, "available", lambda: False)
+    monkeypatch.setattr(ner, "find", lambda text, labels: [(0, 29, "street_address")] if "street_address" in labels else [])
+    found = detect.find([page], Options(hide=["addresses"]), "image")
+    assert [f.text for f in found] == ["14 Canal Road, Leeds LS12 2PJ, United Kingdom"]

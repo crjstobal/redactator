@@ -10,6 +10,14 @@ from .categories import CATEGORIES, Options
 from .model import Finding, Line, Page, pad
 
 YOUR_LIST = "Your list"
+ADDRESSES = CATEGORIES["addresses"].title
+_TAIL = re.compile(r",\s*[A-Z][\w'.-]*(?:\s+[A-Z][\w'.-]*){0,2}\s*$")
+
+
+def _address_tail(line_text: str, end: int) -> int:
+    """'14 Canal Road, Leeds LS12 2PJ' + ', United Kingdom' left alone looks sloppy and still locates the person."""
+    m = _TAIL.match(line_text, end)
+    return m.end() if m else end
 
 # GLiNER sometimes tags a column header ("Email", "Phone") as the data itself.
 _SHAPE = {
@@ -146,6 +154,8 @@ def find(pages: list[Page], options: Options, kind: str, progress=None) -> list[
             if len(sub.strip()) < 3:  # a stray "a" must not black out every line
                 continue
             for s, e in _locate(line.text, sub):
+                if title == ADDRESSES:
+                    e = _address_tail(line.text, e)
                 add(title, line.text[s:e], source, page, line, s, e)
 
     # 3. faces

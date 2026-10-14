@@ -73,6 +73,7 @@ def make_pdf():
         "Email: d.okafor@brightlane.io   Phone: +44 7700 900123",
         "",
         "Video editing, 3 tutorial episodes ............ 1,350.00 EUR",
+        "On-site shoot, courtesy car plate 9256 YT",
         "",
         "Pay to IBAN: ES91 2100 0418 4502 0005 1332",
         "Questions? Write to hello@sidequest.studio",
