@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Redactator: black out private data, on your own computer</title>
+  <meta name="description" content="Drop photos, PDFs and screen recordings. Redactator finds names, emails, card numbers, faces and plates and covers them with solid black boxes. Nothing is uploaded.">
+  <meta property="og:title" content="Redactator">
+  <meta property="og:description" content="Black out private data in photos, PDFs and videos. Runs entirely on your computer.">
+  <meta property="og:image" content="logo.png">
+  <link rel="icon" href="logo.svg" type="image/svg+xml">
+  <style>
+    @font-face {
+      font-family: "Bricolage";
+      src: url("fonts/BricolageGrotesque.ttf") format("truetype");
+      font-weight: 200 800;
+      font-stretch: 75% 100%;
+    }
+    :root {
+      --fog: #EDEFF5;
+      --paper: #FFFFFF;
+      --navy: #23264A;
+      --navy-soft: #5B5F86;
+      --line: #D5D9E6;
+      --mint: #8FE3CF;
+      --hi: #FFE14D;
+      --ink: #000000;
+      font-family: "Bricolage", ui-sans-serif, system-ui, sans-serif;
+      font-size: 18px;
+      line-height: 1.5;
+      color: var(--navy);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--fog); }
+    a { color: inherit; }
+    :focus-visible { outline: 3px solid var(--hi); outline-offset: 3px; border-radius: 6px; }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+
+    header { display: flex; align-items: center; justify-content: space-between; padding: 22px 0; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 22px; font-stretch: 85%; text-decoration: none; }
+    .brand img { width: 40px; height: 40px; }
+    nav a { margin-left: 22px; text-decoration: none; font-weight: 600; font-size: 16px; }
+    nav a:hover { text-decoration: underline; text-underline-offset: 4px; }
+
+    .hero { display: grid; grid-template-columns: 1.15fr .85fr; gap: 40px; align-items: center; padding: 40px 0 56px; }
+    h1 { font-size: clamp(42px, 6vw, 76px); line-height: 1; font-weight: 800; font-stretch: 78%; letter-spacing: -0.025em; margin: 0 0 22px; }
+    /* the one bold move: a phrase in the headline gets redacted, like the product does */
+    .bar { background: var(--ink); color: var(--ink); border-radius: 4px; padding: 0 .08em; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+    .lede { font-size: 21px; color: var(--navy-soft); max-width: 34em; margin: 0 0 30px; }
+    .cta { display: flex; flex-wrap: wrap; gap: 12px; }
+    .btn { display: inline-block; text-decoration: none; font-weight: 700; border-radius: 999px; padding: 13px 26px; border: 2px solid var(--navy); }
+    .btn-mark { background: var(--hi); box-shadow: 0 3px 0 var(--navy); }
+    .btn-ghost { background: var(--paper); }
+    .hero img { width: 100%; max-width: 420px; justify-self: center; }
+
+    .video { background: var(--paper); border-radius: 22px; padding: 14px; box-shadow: 0 0 0 2px var(--line), 0 30px 60px -30px rgba(35,38,74,.45); }
+    .video video { display: block; width: 100%; border-radius: 12px; background: var(--navy); }
+
+    section { padding: 72px 0 0; }
+    h2 { font-size: clamp(30px, 3.6vw, 44px); line-height: 1.05; font-weight: 800; font-stretch: 82%; letter-spacing: -0.015em; margin: 0 0 14px; }
+    .sub { color: var(--navy-soft); max-width: 40em; margin: 0 0 30px; }
+
+    .who { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+    .who div { background: var(--paper); border: 2px solid var(--line); border-radius: 18px; padding: 22px; }
+    .who h3, .steps h3 { margin: 0 0 6px; font-size: 20px; font-weight: 750; }
+    .who p, .steps p { margin: 0; color: var(--navy-soft); font-size: 16.5px; }
+
+    .steps { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; counter-reset: s; }
+    .steps li { counter-increment: s; padding-top: 16px; border-top: 3px solid var(--navy); }
+    .steps li::before { content: counter(s); display: block; font-weight: 800; font-size: 15px; color: var(--navy-soft); margin-bottom: 4px; }
+
+    .promise { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px 40px; margin: 0; padding: 0; list-style: none; }
+    .promise li { padding-left: 30px; position: relative; }
+    .promise li::before { content: ""; position: absolute; left: 0; top: .5em; width: 18px; height: 9px; background: var(--ink); border-radius: 2px; }
+    .promise b { font-weight: 700; }
+
+    .price { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .plan { background: var(--paper); border: 2px solid var(--line); border-radius: 18px; padding: 26px; }
+    .plan.main { border-color: var(--navy); }
+    .plan h3 { margin: 0; font-size: 22px; }
+    .plan .amount { font-size: 40px; font-weight: 800; font-stretch: 80%; margin: 6px 0 8px; }
+    .plan p { margin: 0; color: var(--navy-soft); font-size: 16.5px; }
+
+    pre { background: var(--navy); color: #fff; border-radius: 14px; padding: 18px 22px; overflow-x: auto; font: 15px/1.6 ui-monospace, Menlo, monospace; margin: 0; }
+    footer { padding: 72px 0 40px; color: var(--navy-soft); font-size: 15px; }
+
+    @media (max-width: 820px) {
+      .hero { grid-template-columns: 1fr; padding-top: 16px; }
+      .hero img { max-width: 260px; order: -1; }
+      .who, .steps, .price, .promise { grid-template-columns: 1fr; }
+      nav a:not(:last-child) { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <a class="brand" href="./"><img src="logo.svg" alt=""><span>Redactator</span></a>
+      <nav>
+        <a href="#how">How it works</a>
+        <a href="#price">Price</a>
+        <a href="https://github.com/crjstobal/redactator">GitHub</a>
+      </nav>
+    </header>
+
+    <div class="hero">
+      <div>
+        <h1>Share the file. Keep <span class="bar">the private bits</span> to yourself.</h1>
+        <p class="lede">Drop photos, PDFs and screen recordings. Redactator finds names, emails, card numbers, faces and licence plates, and covers them with solid black boxes. It all runs on your own computer: nothing is uploaded.</p>
+        <div class="cta">
+          <a class="btn btn-mark" href="#get">Get Redactator</a>
+          <a class="btn btn-ghost" href="#demo">Watch the demo</a>
+        </div>
+      </div>
+      <img src="logo.svg" alt="Redactator, a small robot holding a big black marker">
+    </div>
+
+    <div class="video" id="demo">
+      <video src="demo.mp4" poster="demo-poster.jpg" controls preload="metadata" playsinline></video>
+    </div>
+
+    <section>
+      <h2>Made for people who share client files all day</h2>
+      <div class="who">
+        <div><h3>Video editors</h3><p>Cut tutorials from a client's dashboard without leaking their customers' emails in the background.</p></div>
+        <div><h3>Support teams</h3><p>Send screenshots and screen recordings to a vendor with the account details already blacked out.</p></div>
+        <div><h3>Freelancers</h3><p>Forward invoices and contracts as portfolio samples without exposing who paid for what.</p></div>
+      </div>
+    </section>
+
+    <section id="how">
+      <h2>How it works</h2>
+      <p class="sub">Three open models read every line, and their results are merged, so a miss by one is caught by another.</p>
+      <ol class="steps">
+        <li><h3>Drop and tick</h3><p>Add as many files as you like and tick what to hide. Type anything only you know, like your car's plate.</p></li>
+        <li><h3>Three detectors read it</h3><p>Fixed patterns for emails, cards and IBANs. GLiNER2-PII for names and IDs. Gemma 4 for anything that needs judgement.</p></li>
+        <li><h3>Review and export</h3><p>Untick what should stay visible, draw extra boxes by hand, and export clean copies. Originals are never touched.</p></li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>Private by design</h2>
+      <ul class="promise">
+        <li><b>Nothing leaves your computer.</b> The models run locally, so the file you want to clean is never sent to anyone.</li>
+        <li><b>Real PDF redaction.</b> The text under each box is deleted from the file, not just covered with a shape.</li>
+        <li><b>Solid boxes, never blur.</b> Blur and pixelation can be reversed. Black can't.</li>
+        <li><b>Metadata stripped.</b> GPS, camera details and document authors are removed on export.</li>
+        <li><b>Works offline.</b> On a train, on a plane, or inside a client's locked-down network.</li>
+        <li><b>Open source.</b> Read every line of the code that touches your files.</li>
+      </ul>
+    </section>
+
+    <section id="price">
+      <h2>Price</h2>
+      <p class="sub">There is no per-file bill, because there is no server to pay for.</p>
+      <div class="price">
+        <div class="plan">
+          <h3>Open source</h3>
+          <div class="amount">Free</div>
+          <p>The full app and command line, installed with Python and Ollama. Every feature, forever.</p>
+        </div>
+        <div class="plan main">
+          <h3>One-click installer</h3>
+          <div class="amount">Coming soon</div>
+          <p>A signed app for Mac and Windows with the models bundled. No terminal, no setup. A one-time purchase.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="get">
+      <h2>Get Redactator</h2>
+      <p class="sub">You need Python 3.10 or newer and <a href="https://ollama.com/download">Ollama</a>. The models download once, then everything works offline.</p>
+      <pre>ollama pull gemma4:e4b
+pip install git+https://github.com/crjstobal/redactator
+redactator-app</pre>
+    </section>
+
+    <footer>
+      Redactator is open source under the AGPL-3.0 license. Built with Gemma 4, GLiNER2-PII, RapidOCR and PyMuPDF for the DEV Hacktoberfest Open-Source AI Challenge, October 2026.
+    </footer>
+  </div>
+</body>
+</html>
