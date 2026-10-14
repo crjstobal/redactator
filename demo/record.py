@@ -6,12 +6,20 @@ files) comes from real runs of the engine on the sample files. A fake cursor
 and burned-in captions are drawn on top, and frames are captured with the
 Chrome DevTools screencast, then assembled with ffmpeg.
 
-    python demo/record.py            # writes demo/redactator-demo.mp4
+    python demo/record.py            # writes demo/redactator-demo.mp4, silent
+    ELEVENLABS_API_KEY=... python demo/record.py --voice   # narrated with ElevenLabs
+
+With --voice every caption is also spoken, and the scene waits for the
+sentence to finish before moving on, so captions and voice always match.
 """
 
 from __future__ import annotations
 
+import argparse
 import base64
+import hashlib
+import os
+import urllib.request
 import json
 import shutil
 import subprocess
@@ -38,6 +46,31 @@ SCALE = 4 / 3  # 1920x1080 frames
 FILES = ["samples/invoice.pdf", "samples/crm-screenshot.png", "samples/crm-recording.mp4"]
 OPTIONS = Options(also=["9256YT"], keep=["sidequest"])
 MANUAL_BOX = [16, 8, 205, 48]  # the CRM logo in the screenshot, in image pixels
+VOICE_DIR = REPO / "demo" / "voice"
+VOICE_ID = os.environ.get("REDACTATOR_VOICE", "cgSgspJ2msm6clMCkdW9")  # ElevenLabs "Jessica"
+VOICE_MODEL = os.environ.get("REDACTATOR_VOICE_MODEL", "eleven_v4")
+TITLE_LINE = "Meet Redactator. It hides private data in photos, PDFs and videos, without uploading them anywhere."
+END_LINE = "No upload. No account. No per-file bill."
+
+
+def speak(text: str) -> tuple[Path, float]:
+    """Narration for one line, cached on disk so re-recording does not pay twice."""
+    VOICE_DIR.mkdir(exist_ok=True)
+    key = hashlib.sha1(f"{VOICE_ID}|{VOICE_MODEL}|{text}".encode()).hexdigest()[:16]
+    path = VOICE_DIR / f"{key}.mp3"
+    if not path.exists():
+        body = json.dumps({"text": text, "model_id": VOICE_MODEL}).encode()
+        req = urllib.request.Request(
+            f"https://api.elevenlabs.io/v1/text-to-speech/{VOICE_ID}?output_format=mp3_44100_128",
+            data=body,
+            headers={"xi-api-key": os.environ["ELEVENLABS_API_KEY"], "Content-Type": "application/json"},
+        )
+        path.write_bytes(urllib.request.urlopen(req, timeout=120).read())
+    out = subprocess.run(
+        ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(path)],
+        capture_output=True, text=True, check=True,
+    )
+    return path, float(out.stdout.strip())
 
 
 def precompute(work: Path) -> dict:
@@ -170,20 +203,39 @@ window.addEventListener("DOMContentLoaded", () => {
 
 
 class Director:
-    def __init__(self, page):
+    def __init__(self, page, voice: bool):
         self.page = page
+        self.voice = voice
         self.x, self.y = W * 0.62, H * 0.55
         self.captions: list[dict] = []
-        self.t0 = None
+        self.spoken: list[tuple[float, Path]] = []  # wall-clock start, audio file
+        self.busy_until = 0.0
 
     def wait(self, ms):
         self.page.wait_for_timeout(ms)
 
+    def settle(self):
+        """Let the current sentence finish before the scene changes."""
+        left = self.busy_until - time.time()
+        if left > 0:
+            self.wait(int(left * 1000))
+
+    def say(self, text: str):
+        if not self.voice:
+            return
+        self.settle()
+        path, dur = speak(text)
+        self.spoken.append((time.time(), path))
+        self.busy_until = time.time() + dur + 0.35
+
     def caption(self, text: str | None, hold: int = 0):
         if text:
+            self.settle()
             self.page.evaluate("t => { const c = document.getElementById('demo-caption'); c.textContent = t; c.classList.add('on'); }", text)
             self.captions.append({"text": text})
+            self.say(text)
         else:
+            self.settle()
             self.page.evaluate("() => document.getElementById('demo-caption').classList.remove('on')")
         if hold:
             self.wait(hold)
@@ -215,6 +267,8 @@ class Director:
         self.page.keyboard.type(text, delay=110)
 
     def layer(self, name: str, on: bool, html: str | None = None):
+        if not on:
+            self.settle()
         if html is not None:
             self.page.evaluate("([n, h]) => { document.getElementById(n).innerHTML = h; }", [name, html])
         self.page.evaluate(
@@ -231,7 +285,9 @@ def run_script(d: Director, data: dict):
     d.layer("demo-card", True, """<img src="logo.svg" alt=""><h1>Redactator</h1>
       <p>Hide private data in photos, PDFs and videos, without uploading them anywhere.</p>""")
     d.move(W * 0.62, H * 0.55, 10)
-    d.wait(3200)
+    d.wait(600)
+    d.say(TITLE_LINE)
+    d.wait(2600)
     d.layer("demo-card", False)
     d.wait(500)
 
@@ -357,14 +413,18 @@ def run_script(d: Director, data: dict):
     d.layer("demo-card", True, """<img src="logo.svg" alt=""><h1>Redactator</h1>
       <p>No upload. No account. No per-file bill.</p>
       <p class="small">Open source. Gemma 4, GLiNER2-PII and RapidOCR running locally.</p>""")
-    d.wait(4500)
+    d.wait(500)
+    d.say(END_LINE)
+    d.wait(3000)
+    d.settle()
+    d.wait(800)
 
 
 def _escape(text: str) -> str:
     return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
-def record(data: dict, frames_dir: Path) -> list[tuple[float, Path]]:
+def record(data: dict, frames_dir: Path, voice: bool) -> tuple[list[tuple[float, Path]], list[tuple[float, Path]]]:
     frames: list[tuple[float, Path]] = []
     with sync_playwright() as p:
         browser = p.chromium.launch(args=["--autoplay-policy=no-user-gesture-required", "--allow-file-access-from-files"])
@@ -385,17 +445,17 @@ def record(data: dict, frames_dir: Path) -> list[tuple[float, Path]]:
 
         cdp.on("Page.screencastFrame", on_frame)
         cdp.send("Page.startScreencast", {"format": "jpeg", "quality": 92, "maxWidth": 1920, "maxHeight": 1080, "everyNthFrame": 1})
-        d = Director(page)
+        d = Director(page, voice)
         run_script(d, data)
         # the screencast only sends frames when something changes: remember when the last scene ended
         frames.append((time.time(), None))
         cdp.send("Page.stopScreencast")
         CAPTIONS.write_text(json.dumps(d.captions, indent=2))
         browser.close()
-    return frames
+    return frames, d.spoken
 
 
-def assemble(frames: list[tuple[float, Path]], work: Path) -> None:
+def assemble(frames: list[tuple[float, Path]], spoken: list[tuple[float, Path]], work: Path) -> None:
     lines = []
     for (t, path), nxt in zip(frames, frames[1:]):
         if path is not None:
@@ -403,23 +463,51 @@ def assemble(frames: list[tuple[float, Path]], work: Path) -> None:
     lines.append(f"file '{frames[-2][1]}'")
     listing = work / "frames.txt"
     listing.write_text("\n".join(lines))
+    silent = work / "silent.mp4"
     subprocess.run(
         [ffmpeg_exe(), "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", str(listing),
          "-vf", "fps=30,scale=1920:1080:flags=lanczos,format=yuv420p", "-c:v", "libx264", "-crf", "18",
-         "-preset", "slow", "-movflags", "+faststart", str(OUT)],
+         "-preset", "slow", "-movflags", "+faststart", str(silent)],
         check=True,
     )
+    if not spoken:
+        shutil.move(silent, OUT)
+        return
+    # place every sentence at the moment its caption appeared
+    t0 = frames[0][0]
+    cmd = [ffmpeg_exe(), "-y", "-loglevel", "error", "-i", str(silent)]
+    chains = []
+    for n, (t, path) in enumerate(spoken, 1):
+        cmd += ["-i", str(path)]
+        ms = max(0, int((t - t0) * 1000))
+        chains.append(f"[{n}:a]adelay={ms}|{ms},aformat=channel_layouts=stereo[a{n}]")
+    mix = "".join(f"[a{n}]" for n in range(1, len(spoken) + 1))
+    graph = ";".join(chains) + f";{mix}amix=inputs={len(spoken)}:normalize=0,loudnorm=I=-16:TP=-1.5:LRA=11[aout]"
+    cmd += ["-filter_complex", graph, "-map", "0:v", "-map", "[aout]", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
+            "-movflags", "+faststart", str(OUT)]
+    subprocess.run(cmd, check=True)
 
 
 def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--voice", action="store_true", help="narrate captions with ElevenLabs (needs ELEVENLABS_API_KEY)")
+    args = ap.parse_args()
     work = Path(tempfile.mkdtemp(prefix="redactator-demo-"))
     try:
         data = precompute(work)
         frames_dir = work / "frames"
         frames_dir.mkdir()
-        frames = record(data, frames_dir)
-        print(f"{len(frames) - 1} frames captured")
-        assemble(frames, work)
+        if args.voice:
+            # synthesise every line first, so the recording never stalls on the network
+            import re
+
+            lines = re.findall(r'd\.caption\("([^"]+)"', Path(__file__).read_text()) + [TITLE_LINE, END_LINE]
+            for line in lines:
+                speak(line)
+            print(f"{len(lines)} narration lines ready")
+        frames, spoken = record(data, frames_dir, args.voice)
+        print(f"{len(frames) - 1} frames captured, {len(spoken)} lines narrated")
+        assemble(frames, spoken, work)
         print(f"wrote {OUT}")
     finally:
         shutil.rmtree(work, ignore_errors=True)
