@@ -6,6 +6,8 @@
 
 Made for freelancers and small teams who share client material all day: video editors cutting tutorials from a client's dashboard, support agents sending screenshots, consultants forwarding invoices.
 
+**Website and demo video:** [crjstobal.github.io/redactator](https://crjstobal.github.io/redactator/)
+
 ## What it does
 
 - **Photos and screenshots**: finds the private text and faces, paints opaque boxes (never blur, which can be reversed), and strips EXIF and GPS data.
@@ -86,6 +88,10 @@ redactator samples/invoice.pdf --also "Brightlane"
 
 All names, emails and numbers in the samples are made up.
 
+## Demo video
+
+`demo/record.py` regenerates the demo: it drives the real interface headless with results from real runs on the sample files, burns in captions, and optionally narrates them with ElevenLabs (`--voice`, needs `ELEVENLABS_API_KEY`). The narration is only used for the demo; the app itself never calls a cloud service.
+
 ## Development
 
 ```bash
@@ -93,6 +99,10 @@ pip install -e ".[dev]"
 pytest
 python -m redactator.app --debug
 ```
+
+## Hackathon note
+
+Built from scratch between 2026-10-12 and 2026-10-18 for the DEV Hacktoberfest Open-Source AI Challenge, week 2 (Side Hustle). Any commit after 2026-10-18 23:59 PDT will be listed here.
 
 ## License
 
