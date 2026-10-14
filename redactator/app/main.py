@@ -136,12 +136,20 @@ class Api:
     def plan(self, i: int) -> dict | None:
         return self._plan_json(i) if self.items[i].plan else None
 
-    def page_image(self, i: int, page: int) -> str:
-        im = engine.preview(self._plan(i), page)
+    def peek(self, i: int, page: int = 0) -> dict:
+        """Preview of a file before it is analysed."""
+        im, pages = engine.peek(self.items[i].path, page)
+        return {"image": self._data_url(im), "pages": pages}
+
+    @staticmethod
+    def _data_url(im) -> str:
         im.thumbnail((1600, 1600))
         buf = io.BytesIO()
         im.save(buf, "JPEG", quality=88)
         return "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode()
+
+    def page_image(self, i: int, page: int) -> str:
+        return self._data_url(engine.preview(self._plan(i), page))
 
     def toggle(self, i: int, finding_id: str, enabled: bool) -> None:
         for f in self._plan(i).findings:

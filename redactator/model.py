@@ -96,7 +96,9 @@ class Finding:
     hits: int = 0  # occurrences; one occurrence can span several word boxes
 
     def add(self, page: int, box: Box) -> None:
-        self.boxes.setdefault(page, []).append(box)
+        boxes = self.boxes.setdefault(page, [])
+        if box not in boxes:
+            boxes.append(box)
 
     @property
     def count(self) -> int:

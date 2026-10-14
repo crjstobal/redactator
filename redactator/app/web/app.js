@@ -5,6 +5,7 @@ const state = {
   files: [],          // summaries from Python
   current: 0,         // selected file
   plans: new Map(),   // file index -> plan
+  peeks: new Map(),   // file index -> page count, for files not analysed yet
   page: 0,
   drawing: false,
   busy: false,
@@ -63,7 +64,10 @@ window.onFiles = (files) => {
     state.plans.clear();
     imageCache.clear();
     state.current = before < files.length ? before : 0;
-    showDropFor(files[state.current]);
+    renderFiles();
+    syncButtons();
+    showFile(state.current);
+    return;
   }
   renderFiles();
   syncButtons();
@@ -187,6 +191,7 @@ function renderFiles() {
         state.current = Math.min(state.current, Math.max(0, files.length - 1));
         renderFiles();
         syncButtons();
+        state.peeks.clear();
         files.length ? select(state.current) : showDropFor(null);
       };
       tab.append(x);
@@ -204,11 +209,25 @@ async function select(i) {
   state.current = i;
   renderFiles();
   toggleDraw(false);
+  await showFile(i);
+}
+
+async function showFile(i) {
   const p = state.plans.get(i);
   if (p) {
     state.page = firstPageWithBoxes(p);
-    await showPlan();
-  } else {
+    return showPlan();
+  }
+  // not analysed yet: show the file itself so people see what they dropped
+  state.page = 0;
+  $("drop").hidden = true;
+  $("viewer").hidden = false;
+  clearReview();
+  $("drawBtn").disabled = true;
+  try {
+    await renderPage();
+    setupPager();
+  } catch (e) {
     showDropFor(state.files[i]);
   }
 }
@@ -218,6 +237,10 @@ function clearReview() {
   $("foundTitle").textContent = "Review";
   $("allToggle").hidden = true;
   $("emptyNote").hidden = false;
+  const f = state.files[state.current];
+  $("emptyNote").textContent = f && f.status === "reading"
+    ? "Reading this file. Findings will show up here."
+    : "Not checked yet. Pick what to hide on the left and press the yellow button. Everything found shows up here.";
 }
 
 function showDropFor(file) {
@@ -241,6 +264,7 @@ function showDropFor(file) {
 async function showPlan() {
   $("drop").hidden = true;
   $("viewer").hidden = false;
+  $("drawBtn").disabled = false;
   renderFindings();
   setupPager();
   await renderPage();
@@ -259,42 +283,68 @@ function renderFindings() {
   $("allToggle").hidden = !n;
   $("allToggle").textContent = p.findings.every((f) => !f.enabled) ? "Hide all" : "Show all";
 
-  let group = null;
+  const groups = new Map();
   for (const f of p.findings) {
     const label = f.source === "manual" ? "Drawn by hand" : f.label;
-    if (label !== group) {
-      group = label;
-      list.append(Object.assign(document.createElement("li"), { className: "group", textContent: label }));
-    }
-    const li = document.createElement("li");
-    li.className = "item" + (f.enabled ? "" : " off");
-    li.dataset.id = f.id;
-    li.title = SOURCE[f.source] || "";
-
-    const cb = document.createElement("input");
-    cb.type = "checkbox";
-    cb.checked = f.enabled;
-    cb.setAttribute("aria-label", `Hide ${f.text || label}`);
-    cb.onchange = () => setEnabled(f, cb.checked);
-    cb.onclick = (e) => e.stopPropagation();
-
-    const t = Object.assign(document.createElement("span"), { className: "t", textContent: f.text || label });
-    const right = document.createElement("span");
-    if (f.source === "manual") {
-      const x = Object.assign(document.createElement("button"), { className: "x", textContent: "×", title: "Remove box" });
-      x.setAttribute("aria-label", "Remove this box");
-      x.onclick = async (e) => { e.stopPropagation(); applyPlan(await api.remove_manual(state.current, f.id)); };
-      right.append(x);
-    } else {
-      right.className = "n";
-      right.textContent = f.count > 1 ? `×${f.count}` : "";
-    }
-    li.append(cb, t, right);
-    li.onclick = () => jumpTo(f);
-    li.onmouseenter = () => highlight(f.id);
-    li.onmouseleave = () => highlight(null);
-    list.append(li);
+    if (!groups.has(label)) groups.set(label, []);
+    groups.get(label).push(f);
   }
+  for (const [label, items] of groups) {
+    const head = Object.assign(document.createElement("li"), { className: "group" });
+    const gcb = document.createElement("input");
+    gcb.type = "checkbox";
+    const on = items.filter((f) => f.enabled).length;
+    gcb.checked = on === items.length;
+    gcb.indeterminate = on > 0 && on < items.length;
+    gcb.setAttribute("aria-label", `Hide all ${label.toLowerCase()}`);
+    gcb.onchange = () => setGroup(items, gcb.checked);
+    const glabel = Object.assign(document.createElement("label"), { className: "g" });
+    glabel.append(gcb, Object.assign(document.createElement("span"), { textContent: label }));
+    head.append(glabel, Object.assign(document.createElement("span"), { className: "n", textContent: `${on} of ${items.length}` }));
+    list.append(head);
+
+    for (const f of items) list.append(findingRow(f, label));
+  }
+}
+
+function findingRow(f, label) {
+  const li = document.createElement("li");
+  li.className = "item" + (f.enabled ? "" : " off");
+  li.dataset.id = f.id;
+  li.title = SOURCE[f.source] || "";
+
+  const cb = document.createElement("input");
+  cb.type = "checkbox";
+  cb.checked = f.enabled;
+  cb.setAttribute("aria-label", `Hide ${f.text || label}`);
+  cb.onchange = () => setEnabled(f, cb.checked);
+  cb.onclick = (e) => e.stopPropagation();
+
+  const t = Object.assign(document.createElement("span"), { className: "t", textContent: f.text || label });
+  const right = document.createElement("span");
+  if (f.source === "manual") {
+    const x = Object.assign(document.createElement("button"), { className: "x", textContent: "×", title: "Remove box" });
+    x.setAttribute("aria-label", "Remove this box");
+    x.onclick = async (e) => { e.stopPropagation(); applyPlan(await api.remove_manual(state.current, f.id)); };
+    right.append(x);
+  } else {
+    right.className = "n";
+    right.textContent = f.count > 1 ? `×${f.count}` : "";
+  }
+  li.append(cb, t, right);
+  li.onclick = () => jumpTo(f);
+  li.onmouseenter = () => highlight(f.id);
+  li.onmouseleave = () => highlight(null);
+  return li;
+}
+
+async function setGroup(items, on) {
+  for (const f of items) {
+    f.enabled = on;
+    await api.toggle(state.current, f.id, on);
+  }
+  renderFindings();
+  drawBoxes();
 }
 
 async function setEnabled(f, on) {
@@ -335,8 +385,13 @@ function applyPlan(p) {
 }
 
 // ---------- preview ----------
+function pageCount() {
+  const p = plan();
+  return p ? p.pages.length : state.peeks.get(state.current) || 1;
+}
+
 function setupPager() {
-  const n = plan().pages.length;
+  const n = pageCount();
   $("nav").hidden = n < 2;
   $("scrub").max = String(n - 1);
   $("scrub").value = String(state.page);
@@ -344,13 +399,17 @@ function setupPager() {
 
 function updateWhere() {
   const p = plan();
-  const pg = p.pages[state.page];
-  $("where").textContent = p.kind === "video" ? fmtTime(pg.time || 0) : `Page ${state.page + 1} of ${p.pages.length}`;
+  if (!p) {
+    $("where").textContent = pageCount() > 1 ? `Page ${state.page + 1} of ${pageCount()}` : "";
+  } else {
+    const pg = p.pages[state.page];
+    $("where").textContent = p.kind === "video" ? fmtTime(pg.time || 0) : `Page ${state.page + 1} of ${p.pages.length}`;
+  }
   $("scrub").value = String(state.page);
 }
 
 async function goTo(i) {
-  const n = plan().pages.length;
+  const n = pageCount();
   state.page = Math.max(0, Math.min(n - 1, i));
   await renderPage();
 }
@@ -359,10 +418,17 @@ async function renderPage() {
   updateWhere();
   const file = state.current;
   const i = state.page;
-  const key = `${file}:${i}`;
+  const analysed = !!plan();
+  const key = `${analysed ? "plan" : "peek"}:${file}:${i}`;
   let src = imageCache.get(key);
   if (!src) {
-    src = await api.page_image(file, i);
+    if (analysed) {
+      src = await api.page_image(file, i);
+    } else {
+      const peek = await api.peek(file, i);
+      state.peeks.set(file, peek.pages);
+      src = peek.image;
+    }
     imageCache.set(key, src);
   }
   if (i !== state.page || file !== state.current) return; // user moved on while loading
@@ -405,7 +471,7 @@ $("scrub").oninput = (e) => goTo(Number(e.target.value));
 $("prevBtn").onclick = () => goTo(state.page - 1);
 $("nextBtn").onclick = () => goTo(state.page + 1);
 document.addEventListener("keydown", (e) => {
-  if (!plan() || ["TEXTAREA", "INPUT"].includes(e.target.tagName)) return;
+  if ($("viewer").hidden || ["TEXTAREA", "INPUT"].includes(e.target.tagName)) return;
   if (e.key === "ArrowLeft") goTo(state.page - 1);
   if (e.key === "ArrowRight") goTo(state.page + 1);
   if (e.key === "Escape" && state.drawing) toggleDraw(false);
@@ -464,10 +530,10 @@ $("findBtn").onclick = () => {
   state.plans.clear();
   imageCache.clear();
   toggleDraw(false);
-  showDropFor(state.files[state.current]);
   renderFiles();
   syncButtons();
   setStatus("Starting", "busy");
+  showFile(state.current);
   api.analyse(settings);
 };
 

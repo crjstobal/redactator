@@ -89,14 +89,16 @@ def find(pages: list[Page], options: Options, kind: str, progress=None) -> list[
         if not low or any(k in low or low in k for k in keep):
             return
         spans = taken.setdefault(id(line), [])
-        if any(s <= start and end <= e for s, e in spans):
-            return  # already hidden by an earlier detector, don't count it twice
+        repeat = any(s <= start and end <= e for s, e in spans)
         spans.append((start, end))
         key = _fid(label, low)
         f = findings.get(key)
         if f is None:
             f = findings[key] = Finding(key, label, text.strip(), source)
-        f.hits += 1
+        # A span inside one already found still gets its own box: unticking
+        # "Daniel Okafor, Brightlane Ltd." must not reveal "Daniel Okafor".
+        if not repeat:
+            f.hits += 1
         for box in line.boxes_for_span(start, end):
             amount = max(1.0, (box[3] - box[1]) * margin)
             f.add(page.index, pad(box, amount, page.width, page.height))
@@ -166,6 +168,8 @@ def find(pages: list[Page], options: Options, kind: str, progress=None) -> list[
                     findings[f.id] = f
 
     _drop_contained(findings)
+    for f in findings.values():
+        f.hits = max(f.hits, 1)
     order = {c.title: i for i, c in enumerate(CATEGORIES.values())}
     order[YOUR_LIST] = -1
     return sorted(findings.values(), key=lambda f: (order.get(f.label, 99), f.text.lower()))

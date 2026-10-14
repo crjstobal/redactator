@@ -64,3 +64,26 @@ def export(plan: Plan, out_path: str | None = None, progress=None) -> str:
         raise ValueError("Refusing to overwrite the original file")
     HANDLERS[plan.kind].export(plan, out, progress)
     return out
+
+
+def peek(path: str, index: int = 0) -> tuple[Image.Image, int]:
+    """A page or the first frame of a file that has not been analysed yet, plus its page count."""
+    kind = kind_of(path)
+    if kind == "image":
+        return image.open_rgb(path), 1
+    if kind == "pdf":
+        import pymupdf
+
+        with pymupdf.open(path) as doc:
+            page = doc[max(0, min(index, doc.page_count - 1))]
+            zoom = 1400 / max(page.rect.width, page.rect.height)
+            pix = page.get_pixmap(matrix=pymupdf.Matrix(zoom, zoom), alpha=False)
+            return Image.frombytes("RGB", (pix.width, pix.height), pix.samples), doc.page_count
+    import cv2
+
+    cap = cv2.VideoCapture(path)
+    ok, frame = cap.read()
+    cap.release()
+    if not ok:
+        raise ValueError("Cannot read video")
+    return Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)), 1

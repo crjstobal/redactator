@@ -41,3 +41,13 @@ def test_unticked_category_is_ignored(monkeypatch):
 
 def test_split_list():
     assert split_list('9256YT, "Acme Corp"\nmy client\'s company') == ["9256YT", "Acme Corp", "my client's company"]
+
+
+def test_unticking_a_long_finding_keeps_the_short_one_hidden(monkeypatch):
+    page = page_of("Bill to Daniel Okafor, Brightlane Ltd", "Daniel Okafor called again")
+    found = run(page, Options(hide=[], also=["Daniel Okafor, Brightlane", "Daniel Okafor"]), monkeypatch)
+    long = next(f for f in found if "Brightlane" in f.text)
+    short = next(f for f in found if f.text == "Daniel Okafor")
+    long.enabled = False
+    first_line = [b for b in short.boxes[0] if b[1] < 16]
+    assert first_line, "the name inside the long finding lost its own box"
