@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Redactator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="bar">
+    <div class="brand">
+      <img src="logo.svg" alt="" width="40" height="40">
+      <span>Redactator</span>
+    </div>
+    <button class="btn btn-ink" id="exportBtn" disabled>Export redacted file</button>
+  </header>
+
+  <aside class="side">
+    <div class="side-scroll">
+      <section class="ask">
+        <h2 class="h">What should I hide?</h2>
+        <div class="cats" id="cats" role="group" aria-label="Kinds of data to hide"></div>
+
+        <label class="h2" for="also">Also hide</label>
+        <textarea id="also" rows="3" spellcheck="false" placeholder="Exact text or a short description, one per line: 9256YT, Acme Corp, my client's company"></textarea>
+
+        <label class="h2" for="keep">Keep visible</label>
+        <input id="keep" type="text" spellcheck="false" placeholder="Your own name or studio, for example">
+
+        <button class="btn btn-mark" id="findBtn" disabled>Find private data</button>
+        <p class="status" id="status" aria-live="polite"></p>
+      </section>
+
+    </div>
+    <footer class="engine" id="engine"></footer>
+  </aside>
+
+  <main class="stage" id="stage">
+    <nav class="files" id="files" hidden aria-label="Files"></nav>
+
+    <div class="drop" id="drop">
+      <img src="logo.svg" alt="Redactator robot holding a big black marker" class="hero">
+      <h1 id="dropTitle">Drop photos, PDFs or videos</h1>
+      <p id="dropText">I'll find the private bits and black them out. Nothing leaves this computer.</p>
+      <button class="btn btn-ink" id="chooseBtn">Choose files</button>
+    </div>
+
+    <div class="viewer" id="viewer" hidden>
+      <div class="canvas" id="canvas">
+        <div class="page" id="page">
+          <img id="pageImg" alt="Preview of the file with redactions">
+          <div class="boxes" id="boxes"></div>
+        </div>
+      </div>
+      <div class="pager">
+        <button type="button" class="btn btn-ghost" id="drawBtn" aria-pressed="false">Draw a box</button>
+        <div class="nav" id="nav">
+          <button type="button" class="btn btn-ghost" id="prevBtn" aria-label="Previous">&lsaquo;</button>
+          <input type="range" id="scrub" min="0" max="0" value="0" aria-label="Page or frame">
+          <span id="where"></span>
+          <button type="button" class="btn btn-ghost" id="nextBtn" aria-label="Next">&rsaquo;</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <aside class="review" aria-label="Things to hide">
+    <section class="found" id="found">
+      <div class="found-head">
+        <h2 class="h" id="foundTitle">Review</h2>
+        <button type="button" class="link" id="allToggle" hidden>Show all</button>
+      </div>
+      <p class="empty" id="emptyNote">Everything I find shows up here. Untick anything that should stay visible before exporting.</p>
+      <ul id="findings"></ul>
+    </section>
+  </aside>
+
+  <div class="toast" id="toast" role="status" hidden></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

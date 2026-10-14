@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-4 12 548 548" role="img" aria-label="Redactator robot holding a big black marker">
+  <!-- the redaction stroke the robot just drew -->
+  <path d="M60 462 C 150 444, 270 474, 396 452" fill="none" stroke="#000" stroke-width="38" stroke-linecap="round"/>
+
+  <!-- feet -->
+  <rect x="198" y="418" width="44" height="26" rx="12" fill="#23264A"/>
+  <rect x="270" y="418" width="44" height="26" rx="12" fill="#23264A"/>
+
+  <!-- left arm, waving -->
+  <path d="M184 356 L132 318" stroke="#23264A" stroke-width="38" stroke-linecap="round"/>
+  <path d="M184 356 L132 318" stroke="#8FE3CF" stroke-width="24" stroke-linecap="round"/>
+  <circle cx="126" cy="312" r="24" fill="#8FE3CF" stroke="#23264A" stroke-width="10"/>
+
+  <!-- right arm reaching to the marker -->
+  <path d="M330 356 L436 368" stroke="#23264A" stroke-width="38" stroke-linecap="round"/>
+  <path d="M330 356 L436 368" stroke="#8FE3CF" stroke-width="24" stroke-linecap="round"/>
+
+  <!-- body -->
+  <rect x="176" y="316" width="160" height="114" rx="42" fill="#8FE3CF" stroke="#23264A" stroke-width="12"/>
+  <rect x="212" y="356" width="88" height="20" rx="5" fill="#000"/>
+  <rect x="212" y="386" width="54" height="12" rx="4" fill="#23264A" opacity=".35"/>
+
+  <!-- neck -->
+  <rect x="236" y="300" width="40" height="26" rx="8" fill="#23264A"/>
+
+  <!-- antenna -->
+  <path d="M256 124 L256 82" stroke="#23264A" stroke-width="12" stroke-linecap="round"/>
+  <circle cx="256" cy="72" r="18" fill="#FFE14D" stroke="#23264A" stroke-width="10"/>
+
+  <!-- ears -->
+  <rect x="108" y="184" width="36" height="66" rx="14" fill="#8FE3CF" stroke="#23264A" stroke-width="10"/>
+  <rect x="368" y="184" width="36" height="66" rx="14" fill="#8FE3CF" stroke="#23264A" stroke-width="10"/>
+
+  <!-- head -->
+  <rect x="134" y="120" width="244" height="190" rx="66" fill="#8FE3CF" stroke="#23264A" stroke-width="12"/>
+  <rect x="168" y="154" width="176" height="122" rx="44" fill="#23264A"/>
+
+  <!-- eyes -->
+  <ellipse cx="220" cy="206" rx="22" ry="26" fill="#C9FFF2"/>
+  <ellipse cx="292" cy="206" rx="22" ry="26" fill="#C9FFF2"/>
+  <circle cx="227" cy="212" r="11" fill="#23264A"/>
+  <circle cx="299" cy="212" r="11" fill="#23264A"/>
+  <circle cx="213" cy="196" r="7" fill="#fff"/>
+  <circle cx="285" cy="196" r="7" fill="#fff"/>
+
+  <!-- smile and cheeks -->
+  <path d="M238 246 Q256 262 274 246" fill="none" stroke="#C9FFF2" stroke-width="8" stroke-linecap="round"/>
+  <ellipse cx="190" cy="250" rx="13" ry="8" fill="#FF9EAA"/>
+  <ellipse cx="322" cy="250" rx="13" ry="8" fill="#FF9EAA"/>
+
+  <!-- the big black marker, tip touching the end of the stroke -->
+  <g transform="translate(398 450) rotate(26.8)">
+    <path d="M-9 -2 L9 -10 L17 -36 L-17 -36 Z" fill="#000" stroke="#23264A" stroke-width="6" stroke-linejoin="round"/>
+    <rect x="-23" y="-56" width="46" height="24" rx="5" fill="#000" stroke="#23264A" stroke-width="8"/>
+    <rect x="-28" y="-206" width="56" height="156" rx="16" fill="#000" stroke="#23264A" stroke-width="8"/>
+    <rect x="-28" y="-150" width="56" height="44" fill="#fff" stroke="#23264A" stroke-width="8"/>
+    <rect x="-28" y="-134" width="56" height="12" fill="#FFE14D"/>
+    <rect x="-30" y="-226" width="60" height="30" rx="12" fill="#FFE14D" stroke="#23264A" stroke-width="8"/>
+    <path d="M-15 -190 L-15 -160" stroke="#fff" stroke-width="6" stroke-linecap="round" opacity=".45"/>
+  </g>
+
+  <!-- hand gripping the marker -->
+  <circle cx="440" cy="366" r="25" fill="#8FE3CF" stroke="#23264A" stroke-width="10"/>
+</svg>
